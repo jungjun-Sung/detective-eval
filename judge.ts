@@ -12,6 +12,10 @@ import goldenSet from './golden-set.json';
 dotenv.config({ path: '.env.local' });
 const client = new Anthropic();
 const MODEL = 'claude-opus-4-8';
+// Per-1M-token prices (USD). Store tokens, derive cost from this — old runs survive a price change.
+const PRICES: Record<string, { input: number; output: number }> = {
+  'claude-opus-4-8': { input: 5, output: 25 },
+};
 // Per-dimension weights (default 1). ⑦ spatial load and ⑥ AI-tell count more.
 const WEIGHTS: Record<string, number> = { cognitive_ease: 3, ai_tell: 2 };
 
@@ -43,7 +47,10 @@ try {
 
 // Score one detective reply across the 13 dimensions.
 // NOTE: the prompt is Korean because the dialogue being judged is Korean game data.
-async function judgeOne(userInput: string, detectiveResponse: string): Promise<DimScores> {
+async function judgeOne(
+  userInput: string,
+  detectiveResponse: string
+): Promise<{ scores: DimScores; inTok: number; outTok: number }> {
   const prompt = `당신은 추리 게임에서 'AI 탐정'의 응답 품질을 채점하는 평가자입니다.
 아래 채점 기준의 각 항목을 0~5점으로 매기고, 한 줄 이유를 다세요. (0=나쁨, 5=좋음)
 이 응답에 해당하지 않는 항목은 score를 null로 두고 reason에 "해당 없음"이라고 적으세요.
@@ -64,7 +71,11 @@ ${detectiveResponse}`;
     messages: [{ role: 'user', content: prompt }],
     output_config: { format: zodOutputFormat(ScoreSchema) },
   });
-  return response.parsed_output as DimScores;
+  return {
+    scores: response.parsed_output as DimScores,
+    inTok: response.usage.input_tokens,
+    outTok: response.usage.output_tokens,
+  };
 }
 
 // 13 dimension scores → weighted average → label ('good'/'fair'/'bad'), compared to golden-set's English `label` field.
@@ -103,13 +114,18 @@ function toLabel(scores: DimScores): { avg: number; label: string; note: string 
 
 // Score the same reply N times and average per dimension (self-consistency).
 const N = 3;
-async function judgeStable(ex: { id: number; userInput: string; detectiveResponse: string }): Promise<DimScores> {
-  // Reuse the cache if present (no API call).
-  if (cache[ex.id]) return cache[ex.id];
+async function judgeStable(ex: { id: number; userInput: string; detectiveResponse: string }): Promise<{ scores: DimScores; inTok: number; outTok: number }> {
+  // Reuse the cache if present (no API call → no token spend, so 0 tokens).
+  if (cache[ex.id]) return { scores: cache[ex.id], inTok: 0, outTok: 0 };
 
+  let inTok = 0;
+  let outTok = 0;
   const results: DimScores[] = [];
   for (let i = 0; i < N; i++) {
-    results.push(await judgeOne(ex.userInput, ex.detectiveResponse));
+    const r = await judgeOne(ex.userInput, ex.detectiveResponse);
+    inTok += r.inTok;
+    outTok += r.outTok;
+    results.push(r.scores);
   }
   // Average each dimension (skip null; all-null stays null).
   const averaged: DimScores = {};
@@ -123,14 +139,18 @@ async function judgeStable(ex: { id: number; userInput: string; detectiveRespons
     };
   }
   cache[ex.id] = averaged;
-  return averaged;
+  return { scores: averaged, inTok, outTok };
 }
 
 async function main() {
   let agree = 0;
+  let totalIn = 0;
+  let totalOut = 0;
   const mismatches: number[] = [];
   for (const ex of goldenSet.examples) {
-    const averaged = await judgeStable(ex);
+    const { scores: averaged, inTok, outTok } = await judgeStable(ex);
+    totalIn += inTok;
+    totalOut += outTok;
     const { avg, label } = toLabel(averaged);
     const match = label === ex.label;
     if (match) agree++;
@@ -149,6 +169,11 @@ async function main() {
   const rate = Math.round((agree / total) * 100);
   console.log(`\nagreement (N=${N}, weighted): ${agree}/${total} (${rate}%)`);
 
+  // cost of THIS run (cached examples = 0 tokens; derive cost from tokens × price)
+  const price = PRICES[MODEL];
+  const costUsd = (totalIn * price.input + totalOut * price.output) / 1_000_000;
+  console.log(`tokens: ${totalIn} in + ${totalOut} out  →  $${costUsd.toFixed(4)} this run (${MODEL}, cached examples cost $0)`);
+
   // === Regression tracking: append this run as one line ===
   const record = {
     date: new Date().toISOString(),
@@ -159,6 +184,8 @@ async function main() {
     agree,
     total,
     rate,
+    inputTokens: totalIn,
+    outputTokens: totalOut,
     mismatches,
   };
   appendFileSync('results.jsonl', JSON.stringify(record) + '\n');
@@ -170,8 +197,14 @@ async function main() {
     .map((line) => JSON.parse(line));
   console.log('\n=== regression log (cumulative) ===');
   for (const r of rows) {
+    // derive cost from stored tokens × price (older runs have no tokens → "$—")
+    let cost = '$—';
+    if (r.inputTokens != null && r.outputTokens != null) {
+      const p = PRICES[r.model] ?? PRICES[MODEL];
+      cost = '$' + ((r.inputTokens * p.input + r.outputTokens * p.output) / 1_000_000).toFixed(2);
+    }
     console.log(
-      `${r.date.slice(0, 10)}  rubric ${r.rubricVersion}  [${r.agg ?? 'plain'}]  ${r.rate}% (${r.agree}/${r.total})  mismatch:[${r.mismatches.join(',')}]`
+      `${r.date.slice(0, 10)}  rubric ${r.rubricVersion}  [${r.agg ?? 'plain'}]  ${r.rate}% (${r.agree}/${r.total})  ${cost}  mismatch:[${r.mismatches.join(',')}]`
     );
   }
 }

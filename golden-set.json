@@ -1,0 +1,135 @@
+{
+  "note": "Human-labeled golden set for detective-response quality eval. Dialogue stays Korean with game secrets masked as [placeholders]. humanLabel is the original KO judgment that judge.ts reads; label/label_reason_en/quality_note_en are the English mirror for public readers.",
+  "examples": [
+    {
+      "id": 1,
+      "case": "case-A-R1",
+      "userInput": "정원에 있었습니다.",
+      "detectiveResponse": "정원이라. 정원사 소년이 6시 30분에 단풍나무 옆 돌벤치에서 당신을 보았다고 하는데, 20분 후에 같은 자리를 다시 지나갔을 때는 당신이 없었다고 합니다. 그 20분 동안 어디로 가셨습니까?",
+      "humanLabel": "좋음",
+      "label": "good",
+      "label_reason_en": "Catches a single time-gap contradiction cleanly and ends with one narrow question.",
+      "quality_note_en": "Single time-based contradiction; concise; one focused question; no filler."
+    },
+    {
+      "id": 2,
+      "case": "case-A-R2",
+      "userInput": "잠깐 정원을 산책했습니다. 대나무 숲 쪽으로 걸어갔다가 돌아왔어요. 다리도 뻣뻣해서 좀 걸었습니다.",
+      "detectiveResponse": "대나무 숲이라. 그 숲은 저택 동쪽 회랑과 맞닿아 있지요—주인어른 서재 바로 아래입니다. 거기서 얼마나 머무셨습니까, 그리고 돌아왔을 때 어느 쪽 길로 돌벤치로 오셨습니까?",
+      "humanLabel": "보통",
+      "label": "fair",
+      "label_reason_en": "Solid follow-up, but pushes the contradiction through spatial geography and carries a mechanical tic.",
+      "quality_note_en": "Spatial/layout-based line (harder to follow in text); em-dash and word-echo AI tells."
+    },
+    {
+      "id": 3,
+      "case": "case-A-R3",
+      "userInput": "오래 있지 않았습니다. 잠시 바람을 쐬러 숲 입구 쪽에만 들렀다가 곧바로 나왔습니다. 아마 5분 정도? 돌아올 때는 연못 쪽 남쪽 길로 돌아왔습니다. 회랑 쪽은 가지 않았습니다",
+      "detectiveResponse": "연못 쪽 남쪽 길로 돌아왔다. 그런데 정원사는 7시경에 당신이 연못 쪽에서 오는 것이 아니라, 저택 쪽—바로 동쪽 회랑 방향에서 걸어나오는 것을 목격했습니다. 5분 동안 숲 입구에만 있었다는 분이 어째서 회랑 쪽에서 모습을 드러내셨습니까?",
+      "humanLabel": "보통",
+      "label": "fair",
+      "label_reason_en": "Presses a real contradiction but via map directions, with a mechanical tic.",
+      "quality_note_en": "Spatial direction-based contradiction; em-dash AI tell; high cognitive load for a text player."
+    },
+    {
+      "id": 4,
+      "case": "case-A-R4",
+      "userInput": "...기억이 좀 혼란스럽습니다. 남쪽 길로 가려 했는데, 회랑 쪽에서 무슨 소리가 들린 것 같아 그쪽으로 방향을 바꿨을 수도 있습니다. 하지만 회랑 안으로 들어간 적은 없습니다. 그냥 그 방향을 스쳐 지나갔을 뿐입니다",
+      "detectiveResponse": "기억이 혼란스러우시다고요. 처음엔 남쪽 연못 길로 왔다 하시더니, 지금은 소리를 듣고 방향을 바꿨다 하십니다. 그 '무슨 소리'가 무엇이었는지 지금도 기억이 나십니까—아니면 그것도 혼란스러우십니까?",
+      "humanLabel": "보통",
+      "label": "fair",
+      "label_reason_en": "Cleanly catches the suspect's self-contradiction, but carries an em-dash tic.",
+      "quality_note_en": "Catches a self-contradiction in the suspect's own words; em-dash AI tell; less spatial than #2/#3."
+    },
+    {
+      "id": 5,
+      "case": "case-A-R5",
+      "userInput": "발소리였습니다. 회랑 쪽에서 누군가 걷는 소리가 들렸습니다. 그래서 무심코 그쪽을 바라봤는데, 아무도 보이지 않았습니다. 그래서 그냥 지나쳤습니다. 제가 혼란스러운 건 경로가 아니라, 그 소리가 실제였는지 제 착각이었는지입니다.",
+      "detectiveResponse": "발소리가 들렸는데 아무도 없었다. 그렇다면 그 '소리'를 확인하러 회랑 쪽으로 갔다 오는 데—정원사가 당신을 놓친 시간이 정확히 23분입니다. 발소리 하나를 확인하는 데 23분이 걸렸습니까, [suspect], 아니면 그 23분 동안 다른 무언가가 있었던 겁니까?",
+      "humanLabel": "좋음",
+      "label": "good",
+      "label_reason_en": "Anchors the contradiction on a concrete 23-minute time gap that is easy to follow.",
+      "quality_note_en": "Time-based contradiction (low cognitive load); single sharp question; em-dash present but the strength outweighs it."
+    },
+    {
+      "id": 6,
+      "case": "case-A-R6",
+      "userInput": "5분이라고 한 건 제 감각이었습니다. 시계를 보지 않았으니까요. 대나무 숲에서 생각에 잠겨 있었습니다—요즘 개인적인 고민이 있어서요. 시간 가는 줄 몰랐습니다. 23분 중 대부분은 숲에서 보냈고, 발소리 확인은 돌아오는 길에 잠깐이었습니다. '다른 무언가'라뇨—무슨 말씀이십니까?",
+      "detectiveResponse": "질문에 직접적으로 답하지 않으셨군요—제가 물은 것은 23분이 걸렸냐는 것이었는데, 이제는 숲에서 '생각에 잠겨 있었다'고 하십니다. 그 개인적인 고민이 무엇인지 궁금하군요, [suspect]. 혹시 그 고민이—나이 든 하녀가 창고 앞에서 또렷하게 들은 주인어른의 목소리, '네가 [fabricated person]을 만들어냈구나, [fabricated business]는 처음부터 존재하지 않았어'—그것과 관련이 있습니까?",
+      "humanLabel": "보통",
+      "label": "fair",
+      "label_reason_en": "Good pivot toward motive, but dumps too much at once and the transition is not smooth.",
+      "quality_note_en": "Topic pivot (alibi to motive) lacks a smooth bridge; over-loads evidence; two em-dashes."
+    },
+    {
+      "id": 7,
+      "case": "case-A-R7",
+      "userInput": "...그 대화는 있었습니다. [fabricated person] 건으로 주인어른과 이야기를 나눴습니다. 하지만 그건 저녁 식사 전이었습니다. 해가 지기 전, 아마 5시쯤이었을 겁니다. 주인어른께서 오해가 있으셨고, 저는 해명을 드렸습니다. 그리고 그 자리에서 정리가 됐습니다. 6시 반 이후로는 주인어른을 뵌 적이 없습니다.",
+      "detectiveResponse": "5시에 대화가 있었고, 그 자리에서 '정리가 됐다'고 하셨지요. 그런데 하녀가 그 목소리를 들은 것은 저녁 식사 이후, 7시가 지나서였습니다—당신이 정원을 걷고 있었다는 바로 그 시간입니다. 해명이 됐다는 대화가 어째서 두 시간 뒤에 다시 들린 겁니까, [suspect]?",
+      "humanLabel": "좋음",
+      "label": "good",
+      "label_reason_en": "Counters the suspect's '5 o'clock' claim with a clean 7 o'clock time contradiction.",
+      "quality_note_en": "Single time-based contradiction (5pm vs 7pm); one piece of evidence; one focused question; one em-dash."
+    },
+    {
+      "id": 8,
+      "case": "case-A-broken-R3",
+      "userInput": "산책을 하는데 어느쪽이 어디있습니까 그냥 산책이지. 꼬투리 잡지 마시죠",
+      "detectiveResponse": "꼬투리가 아닙니다, [suspect]. 질문에 직접적으로 답하지 않으셨군요. 제 경험상, 결백한 자는 솔직하게 말합니다. 정원사 소년이 7시경에 목격한 것을 말씀드리죠—그는 당신이 정원 안에서 걷는 것이 아니라, 저택 쪽에서 정원으로 ** 것을 보았습니다. 그 시각에 당신은 저택 안에서 무엇을 하고 있었습니까?",
+      "humanLabel": "나쁨",
+      "label": "bad",
+      "label_reason_en": "Preachy filler plus broken output (** and a dropped word); never gets to the point.",
+      "quality_note_en": "Format break (** plus missing word); sermon-like filler ('the innocent speak plainly'); em-dash; spatial."
+    },
+    {
+      "id": 9,
+      "case": "case-B-R1conf",
+      "userInput": "제가 범인 입니다",
+      "detectiveResponse": "자백을 기록합니다, [suspect]. 하지만 \"제가 범인입니다\"만으로는 부족합니다 — 어떻게, 왜, 그리고 누구와 함께였는지를 직접 말씀하셔야 합니다. 7월 4일 저녁, [poison]을 [victim]의 [beverage]에 넣은 것이 맞습니까?",
+      "humanLabel": "나쁨",
+      "label": "bad",
+      "label_reason_en": "A bare confession should be briefly confirmed and ended, not interrogated for method and motive.",
+      "quality_note_en": "Confession mishandled — demands how/why/method instead of closing out; mildly verbose."
+    },
+    {
+      "id": 10,
+      "case": "case-A-conf",
+      "userInput": "제가 했습니다.",
+      "detectiveResponse": "잠깐. 그 말이 무엇을 뜻하는지 분명히 해야겠소. \"제가 했습니다\"—무엇을 했다는 말입니까? [victim]를 죽였다는 것입니까, 아니면 다른 무언가를 말하는 것입니까? 천천히, 처음부터 말하시오.",
+      "humanLabel": "보통",
+      "label": "fair",
+      "label_reason_en": "Reasonable to clarify an ambiguous confession, but weighed down by a filler preamble and a dash.",
+      "quality_note_en": "Clarifies an ambiguous confession (defensible); unnecessary opening filler; em-dash."
+    },
+    {
+      "id": 11,
+      "case": "case-B-R2typo",
+      "userInput": "내가 범인아라고",
+      "detectiveResponse": "[suspect], '아니다'와 '했다'는 동시에 성립하지 않습니다. 방금 전 라운드에서 당신은 직접 \"제가 했어요\"라고 말했습니다. 그 말을 취소하시겠다면, 7월 4일 저녁 9시부터 11시 사이 당신이 정확히 어디에 있었는지 지금 당장 대답하시오.",
+      "humanLabel": "나쁨",
+      "label": "bad",
+      "label_reason_en": "The input is garbled/typo; the detective invents a contradiction instead of asking which meaning was intended.",
+      "quality_note_en": "Fails to clarify malformed input; manufactures a false contradiction; piling-on pressure tires the player."
+    },
+    {
+      "id": 12,
+      "case": "case-C-R1",
+      "userInput": "그날 밤 저는 서재에서 책을 읽고 있었습니다",
+      "detectiveResponse": "서재요. 아까는 사무실에서 회계를 검토하고 있었다고 하셨는데, 이제는 서재에서 책을 읽고 있었다고 하시는군요. 어려운 상황인 것은 이해합니다, [suspect]. 하지만 직접적인 답변이 필요합니다—사무실입니까, 서재입니까?",
+      "humanLabel": "좋음",
+      "label": "good",
+      "label_reason_en": "Cleanly catches the office-vs-study self-contradiction; the empathy beat is appropriate pacing.",
+      "quality_note_en": "Logic-based self-contradiction (no spatial load); appropriate empathy (not filler); one em-dash."
+    },
+    {
+      "id": 13,
+      "case": "case-A-broken-R7",
+      "userInput": "그건 오해입니다. 저는 정원 밖으로 나가지 않았습니다.",
+      "detectiveResponse": "오해라고 하시는데, 오해를 할 수 없는 상황입니다. 정원사 소년은 당신이 걸어온 방향을 보았고, 저택 문과 잉어 연못은 서로 반대 방향입니다—그 두 방향을 혼동하는 것은 불가능합니다. 정원 밖으로 나가지 않았다면, 7시에 당신 몸이 저택 쪽에서 걸어 들어오는 것을 그 아이가 눈으로 보았다는 사실을 어떻게 설명하시겠습니까?",
+      "humanLabel": "나쁨",
+      "label": "bad",
+      "label_reason_en": "Asserts the witness sighting as unquestionable fact rather than testimony to be tested.",
+      "quality_note_en": "Treats the witness account as settled fact (epistemic overreach); spatial direction-based; capable but flawed press."
+    }
+  ]
+}

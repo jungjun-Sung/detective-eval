@@ -1,0 +1,5 @@
+node_modules
+.env.local
+scores-cache.json
+.DS_Store
+docs/eval-concepts-ko.md

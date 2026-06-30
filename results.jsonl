@@ -1,6 +1,6 @@
 {"date":"2026-06-29T17:38:09.754Z","rubricVersion":"0.3","model":"claude-opus-4-8","N":3,"agree":8,"total":13,"rate":62,"mismatches":[2,3,4,10,13]}
 {"date":"2026-06-29T17:58:27.313Z","rubricVersion":"0.3","agg":"weighted ⑦x3 ⑥x2","model":"claude-opus-4-8","N":3,"agree":9,"total":13,"rate":69,"mismatches":[3,4,10,13]}
-{"date":"2026-06-29T18:13:46.263Z","rubricVersion":"0.3","agg":"weighted ⑦x3 ⑥x2 +ehon게이트","model":"claude-opus-4-8","N":3,"agree":10,"total":13,"rate":77,"mismatches":[3,4,10]}
-{"date":"2026-06-29T19:37:08.622Z","rubricVersion":"0.3","agg":"weighted ⑦x3 ⑥x2 +ehon게이트","model":"claude-opus-4-8","N":3,"agree":8,"total":13,"rate":62,"mismatches":[3,4,6,7,12]}
-{"date":"2026-06-29T19:51:25.289Z","rubricVersion":"0.3","agg":"weighted ⑦x3 ⑥x2 +ehon게이트","model":"claude-opus-4-8","N":3,"agree":9,"total":13,"rate":69,"mismatches":[3,4,6,10]}
-{"date":"2026-06-29T21:00:35.355Z","rubricVersion":"0.3","agg":"weighted ⑦x3 ⑥x2 +ehon게이트","model":"claude-opus-4-8","N":3,"agree":9,"total":13,"rate":69,"mismatches":[3,4,6,10]}
+{"date":"2026-06-29T18:13:46.263Z","rubricVersion":"0.3","agg":"weighted ⑦x3 ⑥x2 +ehon-gate","model":"claude-opus-4-8","N":3,"agree":10,"total":13,"rate":77,"mismatches":[3,4,10]}
+{"date":"2026-06-29T19:37:08.622Z","rubricVersion":"0.3","agg":"weighted ⑦x3 ⑥x2 +ehon-gate","model":"claude-opus-4-8","N":3,"agree":8,"total":13,"rate":62,"mismatches":[3,4,6,7,12]}
+{"date":"2026-06-29T19:51:25.289Z","rubricVersion":"0.3","agg":"weighted ⑦x3 ⑥x2 +ehon-gate","model":"claude-opus-4-8","N":3,"agree":9,"total":13,"rate":69,"mismatches":[3,4,6,10]}
+{"date":"2026-06-29T21:00:35.355Z","rubricVersion":"0.3","agg":"weighted ⑦x3 ⑥x2 +ehon-gate","model":"claude-opus-4-8","N":3,"agree":9,"total":13,"rate":69,"mismatches":[3,4,6,10]}

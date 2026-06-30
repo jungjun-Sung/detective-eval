@@ -18,8 +18,6 @@ The scoring rules are made for my own game. But the real point is the method: ho
 - An AI judge gives slightly different scores each run. So I score each reply 3 times and take the average.
 - I save every run, so I can see if a change really helped, or was just luck.
 
-The design notes are in `docs/eval-concepts-ko.md` (Korean).
-
 ## Run it
 ```bash
 npm install
@@ -30,3 +28,4 @@ npx tsx judge.ts
 ## Limitations
 - The data is Korean, and only from 3 cases in the game. It's not a big general test set.
 - It checks how the detective asks questions, not whether it got the case's real answer.
+- The rubric and the judge prompt are written in Korean, because the dialogue being scored is Korean. Making the whole thing English is a planned next step.

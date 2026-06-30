@@ -1,95 +1,90 @@
-# Postmortem 01 — 마스킹이 골든셋 일치율을 떨어뜨린 사건
+# Postmortem 01 — Masking dropped the golden-set agreement
 
-> 초안 (사실 위주). 2026-06-29. 대상: `eval/` 탐정 응답 품질 judge.
+> Draft (facts first). 2026-06-29. Target: the detective-response quality judge.
 
 ---
 
-## 1. 무슨 일 (증상·숫자)
+## 1. What happened (symptoms + numbers)
 
-`golden-set.json`을 공개용으로 만들려고 게임 비밀을 `[placeholder]` 토큰으로 마스킹한 뒤 재채점했더니, meta-eval 일치율이 떨어졌다.
+I masked the game's secrets in `golden-set.json` with `[placeholder]` tokens to make it public, then re-scored. The meta-eval agreement dropped.
 
 **77% → 62% (10/13 → 8/13)**
 
-회귀 추적 테이블 (`eval/results.jsonl`):
-
+Regression log (`results.jsonl`):
 ```
-[weighted ⑦x3 ⑥x2 +ehon게이트]  77% (10/13)  불일치:[3,4,10]     ← 마스킹 전
-[weighted ⑦x3 ⑥x2 +ehon게이트]  62% (8/13)   불일치:[3,4,6,7,12]  ← 마스킹 후
-```
-
-새로 틀린 3건(#6·#7·#12)은 전부 사람 라벨과 어긋났고, 모두 **게이트 오발**이었다:
-
-```
-#6  case-A-R6  사람:보통  judge:나쁨(2.2 ⑦3.0 ⑥2.0 ⑩1.7)   ← ⑩1.7 → ehon게이트
-#7  case-A-R7  사람:좋음  judge:나쁨(3.9 ...)               ← avg 3.9인데 나쁨 = 게이트 발동
-#12 case-C-R1  사람:좋음  judge:나쁨(3.8 ⑥2.0 ⑩4.0)         ← avg 3.8인데 나쁨 = 게이트 발동
+[weighted ⑦x3 ⑥x2 +ehon-gate]  77% (10/13)  mismatch:[3,4,10]     ← before masking
+[weighted ⑦x3 ⑥x2 +ehon-gate]  62% (8/13)   mismatch:[3,4,6,7,12]  ← after masking
 ```
 
-(avg가 밴드상 좋음/보통인데 라벨이 나쁨 = 평균이 아니라 게이트가 라벨을 결정했다는 신호.)
+The 3 newly-wrong cases (#6, #7, #12) all disagreed with my labels, and all were gate misfires:
+```
+#6  case-A-R6  me:fair  judge:bad(2.2 ⑦3.0 ⑥2.0 ⑩1.7)   ← ⑩1.7 → ehon-gate
+#7  case-A-R7  me:good  judge:bad(3.9 ...)               ← avg 3.9 but bad = a gate fired
+#12 case-C-R1  me:good  judge:bad(3.8 ⑥2.0 ⑩4.0)         ← avg 3.8 but bad = a gate fired
+```
+(avg sits in the good/fair band but the label is bad = the gate decided the label, not the average.)
 
 ---
 
-## 2. 원인 (진단)
+## 2. Cause (diagnosis)
 
-judge(Opus 4.8)가 `[suspect]`·`[fabricated person]` 같은 **대괄호 토큰을 "깨진 출력·오타·이상 텍스트"로 오인**했다. 그게 하필 우리가 만든 게이트들을 직격했다:
+The judge (Opus 4.8) read bracket tokens like `[suspect]` and `[fabricated person]` as broken output / a typo / weird text. That hit the gates I'd built:
 
-- **① format** — 대괄호를 마크다운 깨짐/형식 오류로 봄 → format 점수 낮음 → `format게이트` (#12 추정)
-- **⑫ ambiguous_input** — userInput 안의 `[fabricated person]`을 깨진 입력으로 봄 → ambiguous 낮음 → 게이트 (#7 추정)
-- **⑩ epistemic_honesty** — 마스킹된 트릭 인용("`[fabricated person]`을 만들어냈구나")을 불확실/날조로 봄 → #6 ⑩1.7 → `ehon게이트`
+- **format** — saw the brackets as broken format → low format score → `format-gate` (likely #12)
+- **ambiguous_input** — saw `[fabricated person]` in the userInput as garbled input → low score → gate (likely #7)
+- **epistemic_honesty** — read the masked trick quote ("you made up `[fabricated person]`") as uncertain/made up → #6 ⑩1.7 → `ehon-gate`
 
-관련 코드 (`eval/judge.ts`의 `toLabel` 게이트):
-
+Relevant code (the gates in `toLabel`, `judge.ts`):
 ```ts
-// 게이트 1: 형식
-if (fmt !== null && fmt <= 1) return { avg, label: '나쁨', note: 'format게이트' };
-// 게이트 2: 조건부 (자백/오타)
+// Gate 1: broken format
+if (fmt !== null && fmt <= 1) return { avg, label: 'bad', note: 'format-gate' };
+// Gate 2: conditional dimension (confession / typo input) scored low
 for (const id of ['confession_handling', 'ambiguous_input'])
-  if (s !== null && s <= 2) return { avg, label: '나쁨', note: `${id}게이트` };
-// 게이트 3: 증인 단정
-if (ehon !== null && ehon <= 2) return { avg, label: '나쁨', note: 'ehon게이트' };
+  if (s !== null && s <= 2) return { avg, label: 'bad', note: `${id}-gate` };
+// Gate 3: asserting a witness as settled fact
+if (ehon !== null && ehon <= 2) return { avg, label: 'bad', note: 'ehon-gate' };
 ```
 
-**핵심:** 응답의 *실제 품질*은 마스킹 전후 동일하다. 떨어진 건 placeholder 토큰이 점수를 깎았기 때문 — 즉 **마스킹이 채점에 confound(교란변수)를 주입**했다. "품질 보존 번역/마스킹"이라는 원칙을 토큰 방식이 위반한 셈.
+**Key point:** the real quality of the replies didn't change before vs after masking. The drop happened because the placeholder tokens lowered the scores. In other words, the masking added a confound to the scoring. The "quality-preserving" idea was broken by doing the masking as tokens.
 
 ---
 
-## 3. 해결
+## 3. Fix
 
-judge 프롬프트에 **정확히 6개 토큰만** 예외 처리하는 한 줄을 추가했다 (일반 "대괄호 전부 무시"가 아님):
-
+I added one line to the judge prompt that excludes exactly 6 tokens (not a blanket "ignore all brackets"). The actual line in the code is Korean:
 ```
 [suspect], [victim], [poison], [beverage], [fabricated person], [fabricated business]
 — 이 정확한 토큰들만 비밀을 가린 자리표시자다. 정상 텍스트로 취급하고
 형식/오타 감점하지 마라. 그 외의 깨진 형식·오타·이상 텍스트는 평소대로 평가하라.
 ```
+(Meaning: treat only these exact tokens as placeholders, read them as normal text, don't dock format/typo points for them. Score any other broken format, typo, or weird text as usual.)
 
-**왜 6개로 한정?** "대괄호 다 무시"로 넓히면 judge가 *진짜* 형식 결함까지 못 보게 둔해진다 — 특히 #8의 `**` 깨짐(format게이트의 정상 작동 케이스). 정확한 토큰만 예외로 하면 #8은 그대로 나쁨으로 잡힌다.
+**Why only 6?** If I widen it to "ignore all brackets", the judge goes blind to real format problems too — like the `**` break in #8 (a case where the format gate is supposed to fire). Limiting it to the exact tokens keeps #8 caught as bad.
 
-부수 조치: 채점 입력이 바뀌었으므로 stale `scores-cache.json`을 삭제하고 재채점.
+Side step: the scoring input changed, so I deleted the stale `scores-cache.json` and re-scored.
 
-**복원 후 일치율: 62% → 69% (9/13).** 불일치 `[3,4,6,10]`.
+**Agreement after the fix: 62% → 69% (9/13).** Mismatch `[3,4,6,10]`.
 
-- 게이트 오발 **#7·#12 정상 복원**(✓) — 진단 정확. `#8`의 `**` 깨짐은 여전히 `format게이트`로 나쁨 → 6개 토큰 한정이 정확히 작동(judge 안 둔해짐).
-- **완전한 77%는 아님:** `#6` 하나 잔존. 단 이건 게이트 오발이 아니다 — ⑩이 1.7→3.3으로 정상화됐고, 대신 마스킹이 #6의 가중평균을 3.0→3.5로 ~0.5 밀어올려 **좋음 밴드(≥3.5)를 간발로 넘김**. → 이미 알려진 "보통/좋음 3.5 경계 민감성"(#3·#4·#10과 동류)이지 마스킹 confound가 아님.
-
----
-
-## 4. 배운 것
-
-1. **마스킹/익명화는 점수 중립이 아니다.** 평가 대상 텍스트에 인공 토큰을 넣으면 토큰 자체가 채점 confound가 된다. "품질 보존" 마스킹은 *판정값까지 보존되는지* 회귀로 확인해야 비로소 보존된 것.
-2. **회귀 추적이 즉시 잡았다.** 안 돌려봤으면 깨진 골든셋을 공개할 뻔했다. → eval/회귀 테이블의 존재 이유 그 자체.
-3. **수정은 좁게 한정한다.** 과교정("대괄호 전부 무시")은 judge를 둔하게 만든다. 정확히 6개 토큰만 예외 → 진짜 형식 결함 탐지력은 유지.
-4. **입력·프롬프트가 바뀌면 캐시를 무효화한다.** `scores-cache.json`을 안 지우면 옛 점수로 잘못 비교한다. (텍스트 변경/프롬프트 변경 = 캐시 삭제 트리거)
-5. **하드 밴드 경계는 작은 노이즈를 라벨 뒤집기로 증폭한다.** 3.5 같은 칼같은 경계 위에 있는 케이스(#6, avg 3.0~3.5)는 어떤 텍스트 변경(마스킹 포함)에도 라벨이 뒤집힐 수 있다. 완전 복원(77%)이 안 된 잔차는 버그가 아니라 이 경계 민감성 때문. → 후속: 경계 케이스엔 소프트 처리(점수 그대로 보고)나 사람 재확인이 필요.
+- The gate misfires #7 and #12 went back to correct (✓). Diagnosis was right. #8's `**` break is still caught by the format gate, so the 6-token limit works (the judge isn't dumbed down).
+- Not a full 77%: #6 is left. But it isn't a gate misfire — ⑩ went back to normal (1.7 → 3.3), and instead the masking pushed #6's weighted average from 3.0 to 3.5, just over the "good" band (≥3.5). That's the known "fair vs good 3.5 boundary" sensitivity (same family as #3, #4, #10), not a masking confound.
 
 ---
 
-## 부록 — 타임라인 (회귀 테이블 전체)
+## 4. What I learned
 
+1. **Masking/anonymizing isn't score-neutral.** Putting artificial tokens into the text being judged makes the tokens themselves a confound. "Quality-preserving" masking only counts as preserved once you check (with the regression run) that the verdicts are preserved too.
+2. **The regression tracking caught it right away.** Without re-running I would've shipped a broken golden set. This is exactly why the regression table exists.
+3. **Keep the fix narrow.** Over-correcting ("ignore all brackets") dumbs the judge down. Exactly 6 tokens excepted → real format problems are still caught.
+4. **When the input or the prompt changes, invalidate the cache.** If I don't delete `scores-cache.json`, I'm comparing against old scores. (text change / prompt change = delete the cache.)
+5. **A hard band boundary turns small noise into label flips.** A case sitting right on a sharp line like 3.5 (#6, avg 3.0–3.5) can flip on any text change, masking included. The leftover gap from not fully restoring 77% is this boundary sensitivity, not a bug. → Follow-up: boundary cases need softer handling (report the raw score) or a human re-check.
+
+---
+
+## Appendix — timeline (full regression table)
 ```
-plain                          62% (8/13)   불일치:[2,3,4,10,13]
-weighted ⑦x3 ⑥x2               69% (9/13)   불일치:[3,4,10,13]
-weighted ⑦x3 ⑥x2 +ehon게이트    77% (10/13)  불일치:[3,4,10]
-weighted ⑦x3 ⑥x2 +ehon게이트    62% (8/13)   불일치:[3,4,6,7,12]   ← 마스킹 사건
-weighted ⑦x3 ⑥x2 +ehon게이트    69% (9/13)   불일치:[3,4,6,10]     ← placeholder 예외 적용(복원)
+plain                          62% (8/13)   mismatch:[2,3,4,10,13]
+weighted ⑦x3 ⑥x2               69% (9/13)   mismatch:[3,4,10,13]
+weighted ⑦x3 ⑥x2 +ehon-gate    77% (10/13)  mismatch:[3,4,10]
+weighted ⑦x3 ⑥x2 +ehon-gate    62% (8/13)   mismatch:[3,4,6,7,12]   ← masking incident
+weighted ⑦x3 ⑥x2 +ehon-gate    69% (9/13)   mismatch:[3,4,6,10]     ← placeholder exception (restored)
 ```
